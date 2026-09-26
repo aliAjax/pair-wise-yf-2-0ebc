@@ -301,6 +301,11 @@ export default function AddEditPage() {
                     </option>
                   ))}
                 </select>
+                {isEdit && (
+                  <p className="mt-1 text-xs text-ink-light/70">
+                    修改整体噪音后，详情页里早于本次更新的分时段噪音样本会被清空，需要重新采样
+                  </p>
+                )}
               </div>
 
               <div>
@@ -399,7 +404,7 @@ export default function AddEditPage() {
 
             {experiences.length > 0 ? (
               <div className="space-y-4">
-                {experiences.map((exp, index) => {
+                {experiences.map((exp) => {
                   const TimeIcon = timePeriodIcons[exp.timePeriod];
                   return (
                     <div

@@ -26,7 +26,9 @@ import {
 } from '@/types';
 import type { TimePeriodType } from '@/types';
 import Rating from '@/components/Rating/Rating';
+import NoiseSamplePanel from '@/components/NoiseSamplePanel/NoiseSamplePanel';
 import { calculateComfortScore, getComfortLevel, getComfortColor } from '@/utils/comfort';
+import { getNoiseUpdatedDate } from '@/utils/noise';
 
 export default function BenchDetail() {
   const { id } = useParams<{ id: string }>();
@@ -144,7 +146,7 @@ export default function BenchDetail() {
                 </div>
                 <div className="text-center p-3 bg-ochre/5 rounded-lg">
                   <Volume2 className="w-5 h-5 text-ochre mx-auto mb-1" />
-                  <div className="text-xs text-ink-light mb-0.5">噪音</div>
+                  <div className="text-xs text-ink-light mb-0.5">整体噪音</div>
                   <div className="text-sm font-medium text-deep-brown">
                     {NOISE_LABELS[bench.noiseLevel]}
                   </div>
@@ -259,6 +261,8 @@ export default function BenchDetail() {
             )}
           </div>
 
+          <NoiseSamplePanel bench={bench} />
+
           <div className="paper-texture rounded-xl shadow-paper p-6 fade-in opacity-0 stagger-3">
             <h3 className="font-serif text-sm font-semibold text-deep-brown mb-3">
               档案信息
@@ -277,8 +281,16 @@ export default function BenchDetail() {
                 </span>
               </div>
               <div className="flex justify-between">
+                <span className="text-ink-light">噪音更新日期</span>
+                <span className="text-deep-brown">{getNoiseUpdatedDate(bench)}</span>
+              </div>
+              <div className="flex justify-between">
                 <span className="text-ink-light">时段记录</span>
                 <span className="text-deep-brown">{bench.experiences.length} 条</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-ink-light">噪音样本</span>
+                <span className="text-deep-brown">{bench.noiseSamples?.length ?? 0} 条</span>
               </div>
             </div>
           </div>

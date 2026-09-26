@@ -2,10 +2,12 @@ import { useEffect } from 'react';
 import { useBenchStore } from '@/store/useBenchStore';
 import FilterBar from '@/components/FilterBar/FilterBar';
 import BenchCard from '@/components/BenchCard/BenchCard';
+import TimePeriodSelector from '@/components/TimePeriodSelector/TimePeriodSelector';
 import { Armchair } from 'lucide-react';
+import { TIME_PERIOD_LABELS } from '@/types';
 
 export default function ListPage() {
-  const { benches, getFilteredBenches, initialize, initialized } = useBenchStore();
+  const { benches, selectedPeriod, getFilteredBenches, initialize, initialized } = useBenchStore();
   const filteredBenches = getFilteredBenches();
 
   useEffect(() => {
@@ -21,16 +23,20 @@ export default function ListPage() {
           长椅档案
         </h2>
         <p className="text-ink-light text-sm">
-          记录城市中那些被忽略的休憩角落
+          {selectedPeriod
+            ? `按「${TIME_PERIOD_LABELS[selectedPeriod]}」时段查看噪音，缺样本的长椅沿用整体噪音`
+            : '记录城市中那些被忽略的休憩角落'}
         </p>
       </div>
+
+      <TimePeriodSelector className="mb-4" />
 
       <FilterBar />
 
       {filteredBenches.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredBenches.map((bench, index) => (
-            <BenchCard key={bench.id} bench={bench} index={index} />
+            <BenchCard key={bench.id} bench={bench} index={index} period={selectedPeriod} />
           ))}
         </div>
       ) : (

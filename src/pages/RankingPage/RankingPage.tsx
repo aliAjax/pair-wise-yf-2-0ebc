@@ -1,13 +1,14 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Trophy, MapPin, Star, Crown, Medal, Award } from 'lucide-react';
+import { Trophy, MapPin, Star, Crown, Medal, Award, Volume2 } from 'lucide-react';
 import { useBenchStore } from '@/store/useBenchStore';
 import { calculateComfortScore, getComfortLevel, getComfortColor } from '@/utils/comfort';
-import { MATERIAL_LABELS, SHADE_LABELS } from '@/types';
-import type { Bench } from '@/types';
+import { getEffectiveNoise, getNoiseBadgeClass } from '@/utils/noise';
+import TimePeriodSelector from '@/components/TimePeriodSelector/TimePeriodSelector';
+import { MATERIAL_LABELS, SHADE_LABELS, NOISE_LABELS, TIME_PERIOD_LABELS } from '@/types';
 
 export default function RankingPage() {
-  const { benches, initialize, initialized } = useBenchStore();
+  const { benches, selectedPeriod, initialize, initialized } = useBenchStore();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -17,7 +18,7 @@ export default function RankingPage() {
   }, [initialized, initialize]);
 
   const rankedBenches = [...benches]
-    .sort((a, b) => calculateComfortScore(b) - calculateComfortScore(a))
+    .sort((a, b) => calculateComfortScore(b, selectedPeriod) - calculateComfortScore(a, selectedPeriod))
     .map((bench, index) => ({ bench, rank: index + 1 }));
 
   const getRankIcon = (rank: number) => {
@@ -41,15 +42,20 @@ export default function RankingPage() {
           舒适度排行
         </h2>
         <p className="text-ink-light text-sm">
-          综合评分最高的长椅
+          {selectedPeriod
+            ? `按「${TIME_PERIOD_LABELS[selectedPeriod]}」时段的噪音样本计算，缺样本沿用整体噪音`
+            : '综合评分最高的长椅'}
         </p>
       </div>
 
+      <TimePeriodSelector className="mb-5" />
+
       <div className="space-y-3">
         {rankedBenches.map(({ bench, rank }) => {
-          const comfortScore = calculateComfortScore(bench);
+          const comfortScore = calculateComfortScore(bench, selectedPeriod);
           const comfortLevel = getComfortLevel(comfortScore);
           const comfortColor = getComfortColor(comfortScore);
+          const effectiveNoise = getEffectiveNoise(bench, selectedPeriod);
 
           return (
             <div
@@ -85,6 +91,10 @@ export default function RankingPage() {
                     </span>
                     <span className="text-xs text-ink-light px-2 py-0.5 bg-white/60 rounded">
                       {SHADE_LABELS[bench.shadeLevel]}
+                    </span>
+                    <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded ${getNoiseBadgeClass(effectiveNoise)}`}>
+                      <Volume2 className="w-3 h-3" />
+                      {selectedPeriod ? `${TIME_PERIOD_LABELS[selectedPeriod]}·` : ''}{NOISE_LABELS[effectiveNoise]}
                     </span>
                     <div className="flex items-center gap-1 text-xs text-ink-light px-2 py-0.5 bg-white/60 rounded">
                       <Star className="w-3 h-3 fill-ochre text-ochre" />

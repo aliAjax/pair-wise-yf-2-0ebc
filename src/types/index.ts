@@ -13,6 +13,13 @@ export interface BenchExperience {
   rating: number;
 }
 
+export interface NoiseSample {
+  id: string;
+  timePeriod: TimePeriodType;
+  level: NoiseLevelType;
+  sampledAt: string; // 采样日期，格式 YYYY-MM-DD
+}
+
 export interface Bench {
   id: string;
   name: string;
@@ -28,6 +35,8 @@ export interface Bench {
   rating: number;
   review: string;
   experiences: BenchExperience[];
+  noiseSamples?: NoiseSample[];
+  noiseUpdatedAt?: string; // 噪音字段最后更新时间（ISO），分时段样本的采样日不得早于它
   createdAt: string;
   updatedAt: string;
 }
@@ -77,6 +86,8 @@ export const TIME_PERIOD_LABELS: Record<TimePeriodType, string> = {
   evening: '傍晚',
   night: '夜晚',
 };
+
+export const TIME_PERIODS: TimePeriodType[] = ['morning', 'noon', 'afternoon', 'evening', 'night'];
 
 export const TIME_PERIOD_ICONS: Record<TimePeriodType, string> = {
   morning: 'sunrise',

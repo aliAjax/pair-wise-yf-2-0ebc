@@ -1,20 +1,25 @@
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Clock, Volume2, Sun, Armchair } from 'lucide-react';
-import type { Bench } from '@/types';
+import type { Bench, TimePeriodType } from '@/types';
 import { MATERIAL_LABELS, SHADE_LABELS, NOISE_LABELS, STAY_DURATION_LABELS } from '@/types';
 import Rating from '@/components/Rating/Rating';
 import { calculateComfortScore, getComfortLevel, getComfortColor } from '@/utils/comfort';
+import { getEffectiveNoise, getNoiseSample, getNoiseBadgeClass } from '@/utils/noise';
 
 interface BenchCardProps {
   bench: Bench;
   index?: number;
+  period?: TimePeriodType | null;
 }
 
-export default function BenchCard({ bench, index = 0 }: BenchCardProps) {
+export default function BenchCard({ bench, index = 0, period = null }: BenchCardProps) {
   const navigate = useNavigate();
-  const comfortScore = calculateComfortScore(bench);
+  const comfortScore = calculateComfortScore(bench, period);
   const comfortLevel = getComfortLevel(comfortScore);
   const comfortColor = getComfortColor(comfortScore);
+
+  const effectiveNoise = getEffectiveNoise(bench, period);
+  const periodSample = period ? getNoiseSample(bench, period) : undefined;
 
   const staggerClass = `stagger-${(index % 6) + 1}`;
 
@@ -55,9 +60,12 @@ export default function BenchCard({ bench, index = 0 }: BenchCardProps) {
             <Sun className="w-3 h-3" />
             {SHADE_LABELS[bench.shadeLevel]}
           </span>
-          <span className="inline-flex items-center gap-1 px-2 py-1 bg-ochre/10 text-ochre text-xs rounded-md">
+          <span
+            className={`inline-flex items-center gap-1 px-2 py-1 text-xs rounded-md ${getNoiseBadgeClass(effectiveNoise)}`}
+            title={periodSample ? `采样日期 ${periodSample.sampledAt}` : '该时段无样本，沿用整体噪音'}
+          >
             <Volume2 className="w-3 h-3" />
-            {NOISE_LABELS[bench.noiseLevel]}
+            {NOISE_LABELS[effectiveNoise]}
           </span>
           {bench.hasBackrest && (
             <span className="inline-flex items-center gap-1 px-2 py-1 bg-moss-green/10 text-moss-green text-xs rounded-md">

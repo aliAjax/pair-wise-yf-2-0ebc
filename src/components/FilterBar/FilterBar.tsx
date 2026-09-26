@@ -1,6 +1,6 @@
 import { Search, X } from 'lucide-react';
 import { useBenchStore } from '@/store/useBenchStore';
-import { MATERIAL_LABELS, ORIENTATION_LABELS, SHADE_LABELS, NOISE_LABELS } from '@/types';
+import { MATERIAL_LABELS, ORIENTATION_LABELS, SHADE_LABELS, NOISE_LABELS, TIME_PERIOD_LABELS } from '@/types';
 import type { MaterialType, OrientationType, ShadeLevelType, NoiseLevelType } from '@/types';
 
 export default function FilterBar() {
@@ -10,6 +10,7 @@ export default function FilterBar() {
     orientationFilter,
     shadeFilter,
     noiseFilter,
+    selectedPeriod,
     setSearchQuery,
     setMaterialFilter,
     setOrientationFilter,
@@ -73,7 +74,7 @@ export default function FilterBar() {
               onChange={(e) => setNoiseFilter(e.target.value as NoiseLevelType || null)}
               className="px-3 py-1.5 text-sm bg-white/50 border border-deep-brown/10 rounded-lg text-deep-brown focus:bg-white cursor-pointer"
             >
-              <option value="">全部噪音</option>
+              <option value="">{selectedPeriod ? `${TIME_PERIOD_LABELS[selectedPeriod]}噪音` : '全部噪音'}</option>
               {Object.entries(NOISE_LABELS).map(([value, label]) => (
                 <option key={value} value={value}>{label}</option>
               ))}

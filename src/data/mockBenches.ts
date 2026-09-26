@@ -40,6 +40,12 @@ export const mockBenches: Bench[] = [
     ],
     createdAt: '2024-01-15T10:30:00Z',
     updatedAt: '2024-01-20T14:20:00Z',
+    noiseUpdatedAt: '2024-01-20T14:20:00Z',
+    noiseSamples: [
+      { id: 'ns-001-1', timePeriod: 'morning', level: 'quiet', sampledAt: '2024-06-02' },
+      { id: 'ns-001-2', timePeriod: 'afternoon', level: 'quiet', sampledAt: '2024-06-02' },
+      { id: 'ns-001-3', timePeriod: 'evening', level: 'noisy', sampledAt: '2024-06-02' },
+    ],
   },
   {
     id: 'bench-002',
@@ -165,6 +171,11 @@ export const mockBenches: Bench[] = [
     ],
     createdAt: '2024-03-12T12:30:00Z',
     updatedAt: '2024-03-12T12:30:00Z',
+    noiseUpdatedAt: '2024-03-12T12:30:00Z',
+    noiseSamples: [
+      { id: 'ns-005-1', timePeriod: 'morning', level: 'moderate', sampledAt: '2024-05-18' },
+      { id: 'ns-005-2', timePeriod: 'evening', level: 'noisy', sampledAt: '2024-05-18' },
+    ],
   },
   {
     id: 'bench-006',

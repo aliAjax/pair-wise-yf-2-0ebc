@@ -1,8 +1,11 @@
 import { create } from 'zustand';
-import type { Bench, BenchExperience, MaterialType, OrientationType, ShadeLevelType, NoiseLevelType, StayDurationType } from '@/types';
-import { loadBenches, saveBenches } from '@/utils/storage';
+import type { Bench, BenchExperience, MaterialType, OrientationType, ShadeLevelType, NoiseLevelType, TimePeriodType, NoiseSample } from '@/types';
+import { loadBenches, saveBenches, loadSelectedPeriod, saveSelectedPeriod } from '@/utils/storage';
 import { generateId } from '@/utils/comfort';
+import { getEffectiveNoise, getNoiseUpdatedDate, pruneNoiseSamples } from '@/utils/noise';
 import { mockBenches } from '@/data/mockBenches';
+
+export type NoiseSampleResult = { ok: true } | { ok: false; reason: 'stale' };
 
 interface BenchState {
   benches: Bench[];
@@ -11,6 +14,7 @@ interface BenchState {
   orientationFilter: OrientationType | null;
   shadeFilter: ShadeLevelType | null;
   noiseFilter: NoiseLevelType | null;
+  selectedPeriod: TimePeriodType | null;
   initialized: boolean;
 }
 
@@ -21,14 +25,17 @@ interface BenchActions {
   setOrientationFilter: (orientation: OrientationType | null) => void;
   setShadeFilter: (shade: ShadeLevelType | null) => void;
   setNoiseFilter: (noise: NoiseLevelType | null) => void;
+  setSelectedPeriod: (period: TimePeriodType | null) => void;
   clearFilters: () => void;
-  addBench: (bench: Omit<Bench, 'id' | 'createdAt' | 'updatedAt' | 'experiences'>) => void;
+  addBench: (bench: Omit<Bench, 'id' | 'createdAt' | 'updatedAt' | 'experiences' | 'noiseSamples' | 'noiseUpdatedAt'>) => void;
   updateBench: (id: string, updates: Partial<Bench>) => void;
   deleteBench: (id: string) => void;
   getBenchById: (id: string) => Bench | undefined;
   addExperience: (benchId: string, experience: Omit<BenchExperience, 'id' | 'benchId'>) => void;
   updateExperience: (benchId: string, expId: string, updates: Partial<BenchExperience>) => void;
   deleteExperience: (benchId: string, expId: string) => void;
+  addNoiseSample: (benchId: string, sample: Omit<NoiseSample, 'id'>) => NoiseSampleResult;
+  deleteNoiseSample: (benchId: string, sampleId: string) => void;
   getFilteredBenches: () => Bench[];
 }
 
@@ -39,6 +46,7 @@ const initialState: BenchState = {
   orientationFilter: null,
   shadeFilter: null,
   noiseFilter: null,
+  selectedPeriod: loadSelectedPeriod(),
   initialized: false,
 };
 
@@ -60,6 +68,10 @@ export const useBenchStore = create<BenchState & BenchActions>((set, get) => ({
   setOrientationFilter: (orientation) => set({ orientationFilter: orientation }),
   setShadeFilter: (shade) => set({ shadeFilter: shade }),
   setNoiseFilter: (noise) => set({ noiseFilter: noise }),
+  setSelectedPeriod: (period) => {
+    set({ selectedPeriod: period });
+    saveSelectedPeriod(period);
+  },
 
   clearFilters: () => set({
     searchQuery: '',
@@ -75,6 +87,8 @@ export const useBenchStore = create<BenchState & BenchActions>((set, get) => ({
       ...benchData,
       id: generateId(),
       experiences: [],
+      noiseSamples: [],
+      noiseUpdatedAt: now,
       createdAt: now,
       updatedAt: now,
     };
@@ -84,11 +98,20 @@ export const useBenchStore = create<BenchState & BenchActions>((set, get) => ({
   },
 
   updateBench: (id, updates) => {
-    const newBenches = get().benches.map((bench) =>
-      bench.id === id
-        ? { ...bench, ...updates, updatedAt: new Date().toISOString() }
-        : bench
-    );
+    const now = new Date().toISOString();
+    const newBenches = get().benches.map((bench) => {
+      if (bench.id !== id) return bench;
+      const merged = { ...bench, ...updates, updatedAt: now };
+      // 噪音等级变动：记录更新时间，并同步清理旧的分时段样本
+      if (updates.noiseLevel !== undefined && updates.noiseLevel !== bench.noiseLevel) {
+        merged.noiseUpdatedAt = now;
+        merged.noiseSamples = [];
+      } else {
+        merged.noiseSamples = bench.noiseSamples || [];
+        merged.noiseUpdatedAt = bench.noiseUpdatedAt || bench.updatedAt || bench.createdAt;
+      }
+      return merged;
+    });
     set({ benches: newBenches });
     saveBenches(newBenches);
   },
@@ -152,9 +175,49 @@ export const useBenchStore = create<BenchState & BenchActions>((set, get) => ({
     saveBenches(newBenches);
   },
 
+  addNoiseSample: (benchId, sampleData) => {
+    const bench = get().benches.find((b) => b.id === benchId);
+    if (!bench) return { ok: false, reason: 'stale' };
+
+    // 采样日早于噪音字段更新日的不收
+    const noiseUpdatedDate = getNoiseUpdatedDate(bench);
+    if (sampleData.sampledAt < noiseUpdatedDate) {
+      return { ok: false, reason: 'stale' };
+    }
+
+    const newSample: NoiseSample = { ...sampleData, id: generateId() };
+    const newBenches = get().benches.map((b) => {
+      if (b.id !== benchId) return b;
+      // 同一时段只保留最近一次
+      const kept = (b.noiseSamples || []).filter((s) => s.timePeriod !== sampleData.timePeriod);
+      return {
+        ...b,
+        noiseSamples: pruneNoiseSamples([...kept, newSample], noiseUpdatedDate),
+        updatedAt: new Date().toISOString(),
+      };
+    });
+    set({ benches: newBenches });
+    saveBenches(newBenches);
+    return { ok: true };
+  },
+
+  deleteNoiseSample: (benchId, sampleId) => {
+    const newBenches = get().benches.map((bench) =>
+      bench.id === benchId
+        ? {
+            ...bench,
+            noiseSamples: (bench.noiseSamples || []).filter((s) => s.id !== sampleId),
+            updatedAt: new Date().toISOString(),
+          }
+        : bench
+    );
+    set({ benches: newBenches });
+    saveBenches(newBenches);
+  },
+
   getFilteredBenches: () => {
-    const { benches, searchQuery, materialFilter, orientationFilter, shadeFilter, noiseFilter } = get();
-    
+    const { benches, searchQuery, materialFilter, orientationFilter, shadeFilter, noiseFilter, selectedPeriod } = get();
+
     return benches.filter((bench) => {
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
@@ -163,12 +226,13 @@ export const useBenchStore = create<BenchState & BenchActions>((set, get) => ({
         const matchReview = bench.review.toLowerCase().includes(query);
         if (!matchName && !matchLocation && !matchReview) return false;
       }
-      
+
       if (materialFilter && bench.material !== materialFilter) return false;
       if (orientationFilter && bench.orientation !== orientationFilter) return false;
       if (shadeFilter && bench.shadeLevel !== shadeFilter) return false;
-      if (noiseFilter && bench.noiseLevel !== noiseFilter) return false;
-      
+      // 按所选时段的有效噪音过滤，缺样本时沿用原噪音字段
+      if (noiseFilter && getEffectiveNoise(bench, selectedPeriod) !== noiseFilter) return false;
+
       return true;
     });
   },
