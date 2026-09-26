@@ -301,6 +301,14 @@ export default function AddEditPage() {
                     </option>
                   ))}
                 </select>
+                {isEdit &&
+                  existingBench &&
+                  (existingBench.noiseSamples ?? []).length > 0 &&
+                  formData.noiseLevel !== existingBench.noiseLevel && (
+                    <p className="text-xs text-ochre mt-1.5">
+                      修改噪音等级后，已收录的 {existingBench.noiseSamples.length} 条分时段样本将被清理
+                    </p>
+                  )}
               </div>
 
               <div>
@@ -399,7 +407,7 @@ export default function AddEditPage() {
 
             {experiences.length > 0 ? (
               <div className="space-y-4">
-                {experiences.map((exp, index) => {
+                {experiences.map((exp) => {
                   const TimeIcon = timePeriodIcons[exp.timePeriod];
                   return (
                     <div

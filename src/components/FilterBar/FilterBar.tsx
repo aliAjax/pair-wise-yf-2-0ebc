@@ -1,7 +1,7 @@
 import { Search, X } from 'lucide-react';
 import { useBenchStore } from '@/store/useBenchStore';
-import { MATERIAL_LABELS, ORIENTATION_LABELS, SHADE_LABELS, NOISE_LABELS } from '@/types';
-import type { MaterialType, OrientationType, ShadeLevelType, NoiseLevelType } from '@/types';
+import { MATERIAL_LABELS, ORIENTATION_LABELS, SHADE_LABELS, NOISE_LABELS, TIME_PERIOD_LABELS } from '@/types';
+import type { MaterialType, OrientationType, ShadeLevelType, NoiseLevelType, TimePeriodType } from '@/types';
 
 export default function FilterBar() {
   const {
@@ -10,11 +10,13 @@ export default function FilterBar() {
     orientationFilter,
     shadeFilter,
     noiseFilter,
+    selectedTimePeriod,
     setSearchQuery,
     setMaterialFilter,
     setOrientationFilter,
     setShadeFilter,
     setNoiseFilter,
+    setSelectedTimePeriod,
     clearFilters,
     getFilteredBenches,
   } = useBenchStore();
@@ -64,6 +66,18 @@ export default function FilterBar() {
             >
               <option value="">全部遮阴</option>
               {Object.entries(SHADE_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
+
+            <select
+              value={selectedTimePeriod || ''}
+              onChange={(e) => setSelectedTimePeriod(e.target.value as TimePeriodType || null)}
+              className="px-3 py-1.5 text-sm bg-white/50 border border-deep-brown/10 rounded-lg text-deep-brown focus:bg-white cursor-pointer"
+              title="按时段查看噪音与舒适度"
+            >
+              <option value="">综合噪音</option>
+              {Object.entries(TIME_PERIOD_LABELS).map(([value, label]) => (
                 <option key={value} value={value}>{label}</option>
               ))}
             </select>

@@ -1,9 +1,10 @@
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Clock, Volume2, Sun, Armchair } from 'lucide-react';
 import type { Bench } from '@/types';
-import { MATERIAL_LABELS, SHADE_LABELS, NOISE_LABELS, STAY_DURATION_LABELS } from '@/types';
+import { MATERIAL_LABELS, SHADE_LABELS, NOISE_LABELS, STAY_DURATION_LABELS, TIME_PERIOD_LABELS } from '@/types';
 import Rating from '@/components/Rating/Rating';
-import { calculateComfortScore, getComfortLevel, getComfortColor } from '@/utils/comfort';
+import { calculateComfortScore, getComfortLevel, getComfortColor, getEffectiveNoiseLevel } from '@/utils/comfort';
+import { useBenchStore } from '@/store/useBenchStore';
 
 interface BenchCardProps {
   bench: Bench;
@@ -12,7 +13,10 @@ interface BenchCardProps {
 
 export default function BenchCard({ bench, index = 0 }: BenchCardProps) {
   const navigate = useNavigate();
-  const comfortScore = calculateComfortScore(bench);
+  const selectedTimePeriod = useBenchStore((state) => state.selectedTimePeriod);
+  const effectiveNoise = getEffectiveNoiseLevel(bench, selectedTimePeriod);
+  const hasSample = !!selectedTimePeriod && (bench.noiseSamples ?? []).some((s) => s.timePeriod === selectedTimePeriod);
+  const comfortScore = calculateComfortScore(bench, effectiveNoise);
   const comfortLevel = getComfortLevel(comfortScore);
   const comfortColor = getComfortColor(comfortScore);
 
@@ -55,9 +59,14 @@ export default function BenchCard({ bench, index = 0 }: BenchCardProps) {
             <Sun className="w-3 h-3" />
             {SHADE_LABELS[bench.shadeLevel]}
           </span>
-          <span className="inline-flex items-center gap-1 px-2 py-1 bg-ochre/10 text-ochre text-xs rounded-md">
+          <span
+            className="inline-flex items-center gap-1 px-2 py-1 bg-ochre/10 text-ochre text-xs rounded-md"
+            title={hasSample ? '来自该时段的噪音样本' : '该时段暂无样本，沿用综合噪音'}
+          >
             <Volume2 className="w-3 h-3" />
-            {NOISE_LABELS[bench.noiseLevel]}
+            {selectedTimePeriod
+              ? `${TIME_PERIOD_LABELS[selectedTimePeriod]}·${NOISE_LABELS[effectiveNoise]}`
+              : NOISE_LABELS[effectiveNoise]}
           </span>
           {bench.hasBackrest && (
             <span className="inline-flex items-center gap-1 px-2 py-1 bg-moss-green/10 text-moss-green text-xs rounded-md">

@@ -1,13 +1,13 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Trophy, MapPin, Star, Crown, Medal, Award } from 'lucide-react';
+import { Trophy, MapPin, Star, Crown, Medal, Award, Volume2 } from 'lucide-react';
 import { useBenchStore } from '@/store/useBenchStore';
-import { calculateComfortScore, getComfortLevel, getComfortColor } from '@/utils/comfort';
-import { MATERIAL_LABELS, SHADE_LABELS } from '@/types';
-import type { Bench } from '@/types';
+import { calculateComfortScore, getComfortLevel, getComfortColor, getEffectiveNoiseLevel } from '@/utils/comfort';
+import { MATERIAL_LABELS, SHADE_LABELS, NOISE_LABELS, TIME_PERIOD_LABELS } from '@/types';
+import type { TimePeriodType } from '@/types';
 
 export default function RankingPage() {
-  const { benches, initialize, initialized } = useBenchStore();
+  const { benches, initialize, initialized, selectedTimePeriod, setSelectedTimePeriod } = useBenchStore();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -17,7 +17,12 @@ export default function RankingPage() {
   }, [initialized, initialize]);
 
   const rankedBenches = [...benches]
-    .sort((a, b) => calculateComfortScore(b) - calculateComfortScore(a))
+    .sort((a, b) => {
+      const scoreDiff =
+        calculateComfortScore(b, getEffectiveNoiseLevel(b, selectedTimePeriod)) -
+        calculateComfortScore(a, getEffectiveNoiseLevel(a, selectedTimePeriod));
+      return scoreDiff !== 0 ? scoreDiff : b.updatedAt.localeCompare(a.updatedAt);
+    })
     .map((bench, index) => ({ bench, rank: index + 1 }));
 
   const getRankIcon = (rank: number) => {
@@ -36,18 +41,34 @@ export default function RankingPage() {
 
   return (
     <div className="container mx-auto px-4 py-6">
-      <div className="mb-6">
-        <h2 className="font-serif text-2xl font-semibold text-deep-brown mb-1">
-          舒适度排行
-        </h2>
-        <p className="text-ink-light text-sm">
-          综合评分最高的长椅
-        </p>
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="font-serif text-2xl font-semibold text-deep-brown mb-1">
+            舒适度排行
+          </h2>
+          <p className="text-ink-light text-sm">
+            {selectedTimePeriod
+              ? `按${TIME_PERIOD_LABELS[selectedTimePeriod]}时段的噪音样本计算，缺样本沿用综合噪音`
+              : '综合评分最高的长椅'}
+          </p>
+        </div>
+        <select
+          value={selectedTimePeriod || ''}
+          onChange={(e) => setSelectedTimePeriod(e.target.value as TimePeriodType || null)}
+          className="px-3 py-1.5 text-sm bg-white/50 border border-deep-brown/10 rounded-lg text-deep-brown focus:bg-white cursor-pointer"
+          title="按时段查看排行"
+        >
+          <option value="">综合噪音</option>
+          {Object.entries(TIME_PERIOD_LABELS).map(([value, label]) => (
+            <option key={value} value={value}>{label}</option>
+          ))}
+        </select>
       </div>
 
       <div className="space-y-3">
         {rankedBenches.map(({ bench, rank }) => {
-          const comfortScore = calculateComfortScore(bench);
+          const effectiveNoise = getEffectiveNoiseLevel(bench, selectedTimePeriod);
+          const comfortScore = calculateComfortScore(bench, effectiveNoise);
           const comfortLevel = getComfortLevel(comfortScore);
           const comfortColor = getComfortColor(comfortScore);
 
@@ -85,6 +106,12 @@ export default function RankingPage() {
                     </span>
                     <span className="text-xs text-ink-light px-2 py-0.5 bg-white/60 rounded">
                       {SHADE_LABELS[bench.shadeLevel]}
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-xs text-ink-light px-2 py-0.5 bg-white/60 rounded">
+                      <Volume2 className="w-3 h-3" />
+                      {selectedTimePeriod
+                        ? `${TIME_PERIOD_LABELS[selectedTimePeriod]}·${NOISE_LABELS[effectiveNoise]}`
+                        : NOISE_LABELS[effectiveNoise]}
                     </span>
                     <div className="flex items-center gap-1 text-xs text-ink-light px-2 py-0.5 bg-white/60 rounded">
                       <Star className="w-3 h-3 fill-ochre text-ochre" />

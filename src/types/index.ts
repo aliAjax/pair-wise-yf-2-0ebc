@@ -13,6 +13,19 @@ export interface BenchExperience {
   rating: number;
 }
 
+export interface NoiseSample {
+  timePeriod: TimePeriodType;
+  level: NoiseLevelType;
+  sampleDate: string; // YYYY-MM-DD
+}
+
+export type AddNoiseSampleResult =
+  | 'added'
+  | 'replaced'
+  | 'kept-newer'
+  | 'rejected-stale'
+  | 'bench-missing';
+
 export interface Bench {
   id: string;
   name: string;
@@ -24,6 +37,8 @@ export interface Bench {
   hasBackrest: boolean;
   shadeLevel: ShadeLevelType;
   noiseLevel: NoiseLevelType;
+  noiseUpdatedAt: string;
+  noiseSamples: NoiseSample[];
   stayDuration: StayDurationType;
   rating: number;
   review: string;
@@ -77,6 +92,8 @@ export const TIME_PERIOD_LABELS: Record<TimePeriodType, string> = {
   evening: '傍晚',
   night: '夜晚',
 };
+
+export const TIME_PERIODS: TimePeriodType[] = ['morning', 'noon', 'afternoon', 'evening', 'night'];
 
 export const TIME_PERIOD_ICONS: Record<TimePeriodType, string> = {
   morning: 'sunrise',

@@ -1,4 +1,4 @@
-import type { Bench, MaterialType, ShadeLevelType, NoiseLevelType } from '@/types';
+import type { Bench, MaterialType, ShadeLevelType, NoiseLevelType, TimePeriodType } from '@/types';
 
 const materialScores: Record<MaterialType, number> = {
   wood: 5,
@@ -20,10 +20,16 @@ const noiseScores: Record<NoiseLevelType, number> = {
   noisy: 1,
 };
 
-export function calculateComfortScore(bench: Bench): number {
+export function getEffectiveNoiseLevel(bench: Bench, timePeriod?: TimePeriodType | null): NoiseLevelType {
+  if (!timePeriod) return bench.noiseLevel;
+  const sample = bench.noiseSamples?.find((s) => s.timePeriod === timePeriod);
+  return sample ? sample.level : bench.noiseLevel;
+}
+
+export function calculateComfortScore(bench: Bench, noiseOverride?: NoiseLevelType): number {
   const backrestScore = bench.hasBackrest ? 5 : 2;
   const shadeScore = shadeScores[bench.shadeLevel];
-  const noiseScore = noiseScores[bench.noiseLevel];
+  const noiseScore = noiseScores[noiseOverride ?? bench.noiseLevel];
   const materialScore = materialScores[bench.material];
   const userRating = bench.rating;
 
